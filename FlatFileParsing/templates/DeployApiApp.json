@@ -1,0 +1,661 @@
+﻿{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "hostingPlanName": {
+            "type": "string"
+        },
+        "sku": {
+            "type": "string",
+            "allowedValues": [
+                "Free",
+                "Shared",
+                "Basic",
+                "Standard",
+                "Premium"
+            ],
+            "defaultValue": "Free"
+        },
+        "workerSize": {
+            "type": "string",
+            "allowedValues": [
+                "0",
+                "1",
+                "2"
+            ],
+            "defaultValue": "0"
+        },
+        "gatewayName": {
+            "type": "string"
+        },
+        "logicAppName": {
+            "type": "string"
+        },
+        "FTPApiAppName": {
+            "type": "string",
+            "defaultValue": "ftpconnector"
+        },
+        "gatewayToApiAppSecret": {
+            "defaultValue": "0000000000000000000000000000000000000000000000000000000000000000",
+            "type": "securestring"
+        },
+        "SQLApiAppName": {
+            "type": "string",
+            "defaultValue": "microsoftsqlconnector"
+        },
+        "FtpServerAddress": {
+            "type": "string"
+        },
+        "FtpUserName": {
+            "type": "string"
+        },
+        "FtpPassword": {
+            "type": "string"
+        },
+        "RootFolderPath": {
+            "type": "string",
+            "defaultValue": "/demo/flatfile"
+        },
+        "sqlServerName": {
+            "type": "string"
+        },
+        "sqlUserName": {
+            "type": "string"
+        },
+        "sqlPassword": {
+            "type": "string"
+        },
+        "sqlDatabase": {
+            "type": "string"
+        },
+        "sqlTables": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "startIp": "0.0.0.0",
+        "endIp": "0.0.0.0",
+        "$packageId": "Microsoft.ApiApp",
+        "$nugetFeed": "http://apiapps-preview.nuget.org/api/v2/",
+        "packages": [
+            {
+                "$packageId": "FlatFileEncoder",
+                "$packageVersion": "0.0.362"
+            },
+            {
+                "$packageId": "TransformService",
+                "$packageVersion": "0.0.412"
+            }
+        ],
+        "packageCount": 2,
+        "inputLogicApp": "[concat(parameters('logicAppName'),'inputgeneration')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2014-06-01",
+            "name": "[parameters('hostingPlanName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "HostingPlan"
+            },
+            "properties": {
+                "name": "[parameters('hostingPlanName')]",
+                "sku": "[parameters('sku')]",
+                "workerSize": "[parameters('workerSize')]",
+                "numberOfWorkers": 1
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2015-04-01",
+            "name": "[parameters('gatewayName')]",
+            "location": "[resourceGroup().location]",
+            "kind": "gateway",
+            "tags": {
+                "displayName": "GatewayHost"
+            },
+            "resources": [
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/gateway",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites',parameters('gatewayName'))]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.AppService/gateways', parameters('gatewayName'))]"
+                    }
+                }
+            ],
+            "dependsOn": [
+                "[concat(resourceGroup().id, '/providers/Microsoft.Web/serverfarms/',parameters('hostingPlanName'))]"
+            ],
+            "properties": {
+                "name": "[parameters('gatewayName')]",
+                "gatewaySiteName": "[parameters('gatewayName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "ApiAppsGateway_EXTENSION_VERSION",
+                            "value": "latest"
+                        },
+                        {
+                            "name": "EmaStorage",
+                            "value": "D:\\home\\data\\apiapps"
+                        },
+                        {
+                            "name": "WEBSITE_START_SCM_ON_SITE_CREATION",
+                            "value": "1"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.AppService/gateways",
+            "apiVersion": "2015-03-01-preview",
+            "name": "[parameters('gatewayName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "Gateway"
+            },
+            "resources": [
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/gatewaySite",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.AppService/gateways',parameters('gatewayName'))]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.Web/sites',parameters('gatewayName'))]"
+                    }
+                },
+                {
+                    "type": "tokens",
+                    "apiVersion": "2015-03-01-preview",
+                    "location": "[resourceGroup().location]",
+                    "name": "[variables('inputLogicApp')]",
+                    "tags": {
+                        "displayName": "AuthenticationToken"
+                    },
+                    "dependsOn": [
+                        "[resourceId('Microsoft.AppService/gateways', parameters('gatewayName'))]"
+                    ]
+                }
+            ],
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('gatewayName'))]"
+            ],
+            "properties": {
+                "host": {
+                    "resourceName": "[parameters('gatewayName')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2015-04-01",
+            "name": "[concat(parameters('FTPApiAppName'),parameters('gatewayName'))]",
+            "location": "[resourceGroup().location]",
+            "kind": "apiApp",
+            "tags": {
+                "displayName": "FTPAPIAppHost"
+            },
+            "resources": [
+                {
+                    "type": "siteextensions",
+                    "tags": {
+                        "displayName": "APIAppExtension"
+                    },
+                    "apiVersion": "2015-04-01",
+                    "name": "[parameters('FTPApiAppName')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites', concat(parameters('FTPApiAppName'),parameters('gatewayName')))]"
+                    ],
+                    "properties": {
+                        "type": "WebRoot",
+                        "feed_url": "[variables('$nugetFeed')]"
+                    }
+                },
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/apiApp",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites', concat(parameters('FTPApiAppName'),parameters('gatewayName')))]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.AppService/apiapps', parameters('FTPApiAppName'))]"
+                    }
+                }
+            ],
+            "properties": {
+                "name": "[concat(parameters('FTPApiAppName'),parameters('gatewayName'))]",
+                "gatewaySiteName": "[parameters('gatewayName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "EMA_MicroserviceId",
+                            "value": "[parameters('FTPApiAppName')]"
+                        },
+                        {
+                            "name": "EMA_Secret",
+                            "value": "[parameters('gatewayToAPIappSecret')]"
+                        },
+                        {
+                            "name": "EMA_RuntimeUrl",
+                            "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', parameters('gatewayName'))).hostNames[0])]"
+                        },
+                        {
+                            "name": "WEBSITE_START_SCM_ON_SITE_CREATION",
+                            "value": "1"
+                        },
+                        {
+                            "name": "FtpServerAddress",
+                            "value": "[parameters('FtpServerAddress')]"
+                        },
+                        {
+                            "name": "FtpUserName",
+                            "value": "[parameters('FtpUserName')]"
+                        },
+                        {
+                            "name": "FtpPassword",
+                            "value": "[parameters('FtpPassword')]"
+                        },
+                        {
+                            "name": "RootFolderPath",
+                            "value": "[parameters('RootFolderPath')]"
+                        },
+                        {
+                            "name": "UseBinary",
+                            "value": "true"
+                        },
+                        {
+                            "name": "UseSsl",
+                            "value": "false"
+                        },
+                        {
+                            "name": "FtpServerPort",
+                            "value": "21"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.AppService/apiapps",
+            "apiVersion": "2015-03-01-preview",
+            "name": "[parameters('FTPApiAppName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "FTPAPIApp"
+            },
+            "resources": [
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/apiAppSite",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.AppService/apiapps', parameters('FTPApiAppName'))]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.Web/sites', concat(parameters('FTPApiAppName'),parameters('gatewayName')))]"
+                    }
+                }
+            ],
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites/siteextensions', concat(parameters('FTPApiAppName'),parameters('gatewayName')), parameters('FTPApiAppName'))]"
+            ],
+            "properties": {
+                "package": {
+                    "id": "[parameters('FTPApiAppName')]"
+                },
+                "host": {
+                    "resourceName": "[concat(parameters('FTPApiAppName'),parameters('gatewayName'))]"
+                },
+                "gateway": {
+                    "resourceName": "[parameters('gatewayName')]"
+                },
+                "dependencies": [ ]
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2015-04-01",
+            "name": "[concat(parameters('SQLApiAppName'),parameters('gatewayName'))]",
+            "location": "[resourceGroup().location]",
+            "kind": "apiApp",
+            "tags": {
+                "displayName": "SQLAPIAppHost"
+            },
+            "resources": [
+                {
+                    "type": "siteextensions",
+                    "tags": {
+                        "displayName": "APIAppExtension"
+                    },
+                    "apiVersion": "2015-04-01",
+                    "name": "[parameters('SQLApiAppName')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites',concat(parameters('SQLApiAppName'),parameters('gatewayName')))]"
+                    ],
+                    "properties": {
+                        "type": "WebRoot",
+                        "feed_url": "[variables('$nugetFeed')]"
+                    }
+                },
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/apiApp",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites', concat(parameters('SQLApiAppName'),parameters('gatewayName')))]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.AppService/apiapps', parameters('SQLApiAppName'))]"
+                    }
+                }
+            ],
+            "properties": {
+                "name": "[concat(parameters('SQLApiAppName'),parameters('gatewayName'))]",
+                "gatewaySiteName": "[parameters('gatewayName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "EMA_MicroserviceId",
+                            "value": "[parameters('SQLApiAppName')]"
+                        },
+                        {
+                            "name": "EMA_Secret",
+                            "value": "[parameters('gatewayToAPIappSecret')]"
+                        },
+                        {
+                            "name": "EMA_RuntimeUrl",
+                            "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', parameters('gatewayName'))).hostNames[0])]"
+                        },
+                        {
+                            "name": "WEBSITE_START_SCM_ON_SITE_CREATION",
+                            "value": "1"
+                        },
+                        {
+                            "name": "SqlServerName",
+                            "value": "[parameters('sqlServerName')]"
+                        },
+                        {
+                            "name": "SqlPortNumber",
+                            "value": "1433"
+                        },
+                        {
+                            "name": "SqlUserName",
+                            "value": "[parameters('sqlUserName')]"
+                        },
+                        {
+                            "name": "SqlPassword",
+                            "value": "[parameters('sqlPassword')]"
+                        },
+                        {
+                            "name": "SqlDatabase",
+                            "value": "[parameters('sqlDatabase')]"
+                        },
+                        {
+                            "name": "OnPremise",
+                            "value": "false"
+                        },
+                        {
+                            "name": "SqlTables",
+                            "value": "[parameters('sqlTables')]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.AppService/apiapps",
+            "apiVersion": "2015-03-01-preview",
+            "name": "[parameters('SQLApiAppName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "SQLAPIApp"
+            },
+            "resources": [
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/apiAppSite",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.AppService/apiapps', parameters('SQLApiAppName'))]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.Web/sites', concat(parameters('SQLApiAppName'),parameters('gatewayName')))]"
+                    }
+                }
+            ],
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites/siteextensions', concat(parameters('SQLApiAppName'),parameters('gatewayName')), parameters('SQLApiAppName'))]"
+            ],
+            "properties": {
+                "package": {
+                    "id": "[parameters('SQLApiAppName')]"
+                },
+                "host": {
+                    "resourceName": "[concat(parameters('SQLApiAppName'),parameters('gatewayName'))]"
+                },
+                "gateway": {
+                    "resourceName": "[parameters('gatewayName')]"
+                },
+                "dependencies": [ ]
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2015-04-01",
+            "name": "[concat(variables('packages')[copyIndex()].$packageId, parameters('gatewayName'))]",
+            "location": "[resourceGroup().location]",
+            "kind": "apiApp",
+            "copy": {
+                "name": "siteLoop",
+                "count": "[variables('packageCount')]"
+            },
+            "resources": [
+                {
+                    "type": "siteextensions",
+                    "apiVersion": "2015-02-01",
+                    "name": "[variables('packages')[copyIndex()].$packageId]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites', concat(variables('packages')[copyIndex()].$packageId, parameters('gatewayName')))]"
+                    ],
+                    "properties": {
+                        "type": "WebRoot",
+                        "feed_url": "[variables('$nugetFeed')]",
+                        "version": "[variables('packages')[copyIndex()].$packageVersion]"
+                    }
+                },
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/apiApp",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites', concat(variables('packages')[copyIndex()].$packageId, parameters('gatewayName')))]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.AppService/apiapps', variables('packages')[copyIndex()].$packageId)]"
+                    }
+                }
+            ],
+            "properties": {
+                "name": "[ concat(variables('packages')[copyIndex()].$packageId, parameters('gatewayName'))]",
+                "gatewaySiteName": "[parameters('gatewayName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]",
+                "hostingEnvironment": null,
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "EMA_MicroserviceId",
+                            "value": "[variables('packages')[copyIndex()].$packageId]"
+                        },
+                        {
+                            "name": "EMA_Secret",
+                            "value": "[parameters('gatewayToAPIappSecret')]"
+                        },
+                        {
+                            "name": "EMA_RuntimeUrl",
+                            "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', parameters('gatewayName'))).hostNames[0] )]"
+                        },
+                        {
+                            "name": "WEBSITE_START_SCM_ON_SITE_CREATION",
+                            "value": "1"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.AppService/apiapps",
+            "apiVersion": "2015-03-01-preview",
+            "name": "[variables('packages')[copyIndex()].$packageId]",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "apiAppLoop",
+                "count": "[variables('packageCount')]"
+            },
+            "resources": [
+                {
+                    "type": "providers/links",
+                    "apiVersion": "2015-01-01",
+                    "name": "Microsoft.Resources/apiAppSite",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.AppService/apiapps',variables('packages')[copyIndex()].$packageId)]"
+                    ],
+                    "properties": {
+                        "targetId": "[resourceId('Microsoft.Web/sites', concat(variables('packages')[copyIndex()].$packageId, parameters('gatewayName')))]"
+                    }
+                }
+            ],
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites/siteextensions', concat(variables('packages')[copyIndex()].$packageId, parameters('gatewayName')), variables('packages')[copyIndex()].$packageId)]"
+            ],
+            "properties": {
+                "package": {
+                    "id": "[variables('packages')[copyIndex()].$packageId]"
+                },
+                "host": {
+                    "resourceName": "[concat(variables('packages')[copyIndex()].$packageId, parameters('gatewayName'))]"
+                },
+                "gateway": {
+                    "resourceName": "[parameters('gatewayName')]"
+                },
+                "dependencies": [ ]
+            }
+        },
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2015-02-01-preview",
+            "name": "[parameters('logicAppName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "LogicApp"
+            },
+            "properties": {
+                "sku": {
+                    "name": "[parameters('sku')]",
+                    "plan": {
+                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Web/serverfarms/',parameters('hostingPlanName'))]"
+                    }
+                },
+                "definition": {
+                    "$schema": "http://schema.management.azure.com/providers/Microsoft.Logic/schemas/2014-12-01-preview/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+
+                    },
+                    "triggers": {
+
+                    },
+                    "actions": {
+
+                    },
+                    "outputs": { }
+                },
+                "parameters": { }
+            }
+        },
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2015-02-01-preview",
+            "name": "[variables('inputLogicApp')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "[variables('inputLogicApp')]"
+            },
+            "properties": {
+                "sku": {
+                    "name": "[parameters('sku')]",
+                    "plan": {
+                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Web/serverfarms/',parameters('hostingPlanName'))]"
+                    }
+                },
+                "definition": {
+                    "$schema": "http://schema.management.azure.com/providers/Microsoft.Logic/schemas/2014-12-01-preview/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "token": {
+                            "defaultValue": "[reference(resourceId('Microsoft.AppService/gateways/tokens', parameters('gatewayName'), variables('inputLogicApp'))).token]",
+                            "type": "String",
+                            "metadata": {
+                                "token": {
+                                    "name": "token"
+                                }
+                            }
+                        }
+                    },
+                    "triggers": {
+                        "recurrence": {
+                            "type": "Recurrence",
+                            "recurrence": {
+                                "frequency": "Hour",
+                                "interval": 1
+                            }
+                        }
+                    },
+                    "actions": {
+                        "ftpconnector": {
+                            "type": "ApiApp",
+                            "inputs": {
+                                "apiVersion": "2015-01-14",
+                                "host": {
+                                    "id": "[concat(resourceGroup().id, '/providers/Microsoft.AppService/apiApps/',parameters('FTPApiAppName'))]",
+                                    "gateway": "[concat('https://', reference(resourceId('Microsoft.Web/sites', parameters('gatewayName'))).hostNames[0])]"
+                                },
+                                "operation": "UploadFile",
+                                "parameters": {
+                                    "content": {
+                                        "Content": "TV,2,300",
+                                        "ContentTransferEncoding": "None"
+                                    },
+                                    "FilePath": "@concat('/in/',guid(),'.txt')",
+                                    "AppendIfExists": false
+                                },
+                                "authentication": { 
+                                    "type": "Raw",
+                                    "scheme": "Zumo",
+                                    "parameter": "@parameters('token')"
+                                }
+                            },
+                            "conditions": [ ]
+                        }
+                    },
+                    "outputs": { }
+                },
+                "parameters": { }
+            }
+        }
+    ],
+    "outputs": {
+
+    }
+}
