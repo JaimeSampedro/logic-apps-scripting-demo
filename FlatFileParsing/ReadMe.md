@@ -207,8 +207,8 @@ Hopefully this helped you in getting started with logic apps and some of the Biz
 [16]: ./images/TransformUploaded.PNG
 [17]: ./images/FTPFolderStructure.PNG
 [18]: ./images/FlatFileDemoLogicApp.PNG
-[19]: ./images/FlatFileDemoLogicApp.Flow.Unconfigured.PNG
-[20]: ./images/FlatFileDemoLogicApp.Flow.Configured.PNG
-[21]: ./images/FlatFileDemoLogicApp.Flow.InputDataGeneration.PNG
-[22]: ./images/FlatFileDemoLogicApp.Flow.DemoFlowSuccessful.PNG
-[23]: ./images/FlatFileDemoLogicApp.Flow.SQLEntries.PNG
+[19]: ./images/FlatFileDemoLogicAppFlowUnconfigured.PNG
+[20]: ./images/FlatFileDemoLogicAppFlowConfigured.PNG
+[21]: ./images/FlatFileDemoLogicAppFlowInputDataGeneration.PNG
+[22]: ./images/FlatFileDemoLogicAppFlowDemoFlowSuccessful.PNG
+[23]: ./images/FlatFileDemoLogicAppFlowSQLEntries.PNG
