@@ -617,7 +617,7 @@
                         "recurrence": {
                             "type": "Recurrence",
                             "recurrence": {
-                                "frequency": "Hour",
+                                "frequency": "Minute",
                                 "interval": 1
                             }
                         }
@@ -637,7 +637,7 @@
                                         "Content": "TV,2,300",
                                         "ContentTransferEncoding": "None"
                                     },
-                                    "FilePath": "@concat('/in/',guid(),'.txt')",
+                                    "FilePath": "@concat('in/',guid(),'.txt')",
                                     "AppendIfExists": false
                                 },
                                 "authentication": { 
