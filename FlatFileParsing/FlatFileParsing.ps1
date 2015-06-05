@@ -1,13 +1,14 @@
 ﻿#region Init Parameters
-$resourceGroupName = "flatfiledemo"
+$baseName = [guid]::NewGuid().Guid.Replace("-","")
+$resourceGroupName = "flatfiledemo$baseName"
 $resourceGroupLocation = "West US"
-$serverName = "flatfiledemosql"
+$serverName = $resourceGroupName + "sql"
 $databaseName = "ordersdb"
-$siteName = "flatfiledemo"
-$hostingPlanName = "flatfiledemohp"
+$siteName = $resourceGroupName + "site"
+$hostingPlanName = $resourceGroupName + "hp"
 $sku = "Standard"
 $workerSize = "0"
-$gatewayName = "flatfiledemogateway"
+$gatewayName = $baseName
 $logicAppName = "flatfiledemo"
 $sqlCredentail = Get-Credential -Message "Enter the user name and password for SQL database"
 $sqlUserName = $sqlCredentail.UserName
