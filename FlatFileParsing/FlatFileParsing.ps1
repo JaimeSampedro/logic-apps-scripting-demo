@@ -1,4 +1,22 @@
-﻿#region Init Parameters
+﻿#Function - MakeDirectory
+function CreateFTPDirectory{
+    Param(
+        $ftpHost
+        ,$ftpUserName
+        ,$ftpUserPasword
+        ,$relativeFolderPath
+    )
+    Process
+    {
+        $newFolder = $ftpHost + "/" + $relativeFolderPath;
+        $createFolder = [System.Net.WebRequest]::Create($newFolder);
+        $createFolder.Credentials = New-Object System.Net.NetworkCredential($ftpUserName,$ftpUserPasword);
+        $createFolder.Method = [System.Net.WebRequestMethods+FTP]::MakeDirectory;
+        $createFolder.GetResponse();
+    }
+}
+
+#region Init Parameters
 $baseName = [guid]::NewGuid().Guid.Replace("-","")
 $resourceGroupName = "flatfiledemo$baseName"
 $resourceGroupLocation = "West US"
@@ -32,7 +50,7 @@ $sqlTable = "Orders"
 
 #region SQL+WebSite
 #Deploy an instance of SQL Azure database and a website. This website will be used as a FTP server in the demo. 
-$result = New-AzureResourceGroup -Name $resourceGroupName -Location $resourceGroupLocation -TemplateFile $templateFileLocation -DeploymentName $deploymentName -serverName $serverName -administratorLogin $sqlUserName -administratorPassword $sqlPassword -databaseName $databaseName -siteName $siteName -hostingPlanName $hostingPlanName -sku Standard -workerSize 0 -startIp "0.0.0.0" -endIp "0.0.0.0"
+$result = New-AzureResourceGroup -Name $resourceGroupName -Location $resourceGroupLocation -TemplateFile $templateFileLocation -DeploymentName $deploymentName -serverName $serverName -administratorLogin $sqlUserName -administratorPassword $sqlPassword -databaseName $databaseName -siteName $siteName -hostingPlanName $hostingPlanName -sku $sku -workerSize 0 -startIp "0.0.0.0" -endIp "0.0.0.0"
 #endregion
 
 #region API Apps + Logic Apps
@@ -46,20 +64,26 @@ $ftpUserName = $ftpPubProfile.UserName
 $ftpUserPasword = $ftpPubProfile.UserPassword
 $ftpEndPoint = $ftpPubProfile.PublishUrl.Replace("/site/wwwroot","")
 
-#Create a firewall rule 
-New-AzureSqlServerFirewallRule -FirewallRuleName $firewallRuleName -StartIpAddress $startIpAddress -EndIpAddress $endIpAddress -ServerName $serverName -ResourceGroupName $resourceGroupName
-
-#Create the API Apps and the Logic Apps required for the demo
-$apiAppsTemplateResult = New-AzureResourceGroup -Name $resourceGroupName -Force -Location $resourceGroupLocation -TemplateFile $apiAppsTemplateLocation -hostingPlanName $hostingPlanName -sku Standard -gatewayName $gatewayName -logicAppName $logicAppName -ftpServerAddress $ftpPubProfile.PublishUrl.Replace("/site/wwwroot","").Replace("ftp://","") -ftpUserName $ftpUserName -ftpPassword $ftpUserPasword -sqlServerName $serverinstance -sqlUserName $sqlUserName -sqlPassword $sqlCredentail.GetNetworkCredential().Password -sqlDatabase $databaseName -sqlTables $sqlTable
-
-#Create the database objects required for the demo
-Invoke-Sqlcmd -ServerInstance $serverinstance -Database $databaseName -Username $sqlUserName -Password $sqlCredentail.GetNetworkCredential().Password -InputFile $sqlScriptLocation
+CreateFTPDirectory $ftpEndPoint $ftpUserName $ftpUserPasword "demo"
+CreateFTPDirectory $ftpEndPoint $ftpUserName $ftpUserPasword "demo/flatfile"
+CreateFTPDirectory $ftpEndPoint $ftpUserName $ftpUserPasword "demo/flatfile/in"
 
 Write-Host "FTP Credentials are provided below"
 Write-Host "FTP hostname: $ftpEndPoint"
 Write-Host "FTP Username: $ftpUserName"
 Write-Host "FTP UserPassword: $ftpUserPasword"
 Write-Host "FTP root location for demo: $ftpRootFolder"
+
+#Create a firewall rule 
+New-AzureSqlServerFirewallRule -FirewallRuleName $firewallRuleName -StartIpAddress $startIpAddress -EndIpAddress $endIpAddress -ServerName $serverName -ResourceGroupName $resourceGroupName
+
+#Create the API Apps and the Logic Apps required for the demo
+$apiAppsTemplateResult = New-AzureResourceGroup -Name $resourceGroupName -Force -Location $resourceGroupLocation -TemplateFile $apiAppsTemplateLocation -hostingPlanName $hostingPlanName -sku $sku -gatewayName $gatewayName -logicAppName $logicAppName -ftpServerAddress $ftpPubProfile.PublishUrl.Replace("/site/wwwroot","").Replace("ftp://","") -ftpUserName $ftpUserName -ftpPassword $ftpUserPasword -sqlServerName $serverinstance -sqlUserName $sqlUserName -sqlPassword $sqlCredentail.GetNetworkCredential().Password -sqlDatabase $databaseName -sqlTables $sqlTable
+
+#Create the database objects required for the demo
+Invoke-Sqlcmd -ServerInstance $serverinstance -Database $databaseName -Username $sqlUserName -Password $sqlCredentail.GetNetworkCredential().Password -InputFile $sqlScriptLocation
+
+Write-Host "Script execution completed."
 }
 else
 {

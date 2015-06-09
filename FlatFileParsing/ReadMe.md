@@ -34,7 +34,7 @@ The script makes use of Azure Resource Manager templates and does the following
 ##Pre-requisites
 
 - Azure subscription - If you dont already have one, you can sign up for a free trial [here][3]
-- [Azure Powershell][4]
+- Azure Powershell 0.8.0 or later. To install the latest version and associate it with your Azure subscription, see [How to install and configure Azure Powershell][4].
 - Powershell tools from [SQL Server 2014 feature pack][5]
 
 ##Things to note before getting started
