@@ -617,7 +617,7 @@
                         "recurrence": {
                             "type": "Recurrence",
                             "recurrence": {
-                                "frequency": "Minute",
+                                "frequency": "Hour",
                                 "interval": 1
                             }
                         }
