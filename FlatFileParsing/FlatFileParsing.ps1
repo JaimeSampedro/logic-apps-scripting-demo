@@ -37,6 +37,7 @@ $ftpRootFolder = "/demo/flatfile"
 
 $templateFileLocation = "./templates/DeploySqlAndWebSite.json"
 $apiAppsTemplateLocation = "./templates/DeployApiApp.json"
+$inputLogicAppTemplateLocation = "./templates/DeployInputGenLogicApp.json"
 $sqlScriptLocation = "./setup/sqlscript/dbo.Orders.sql"
 
 #Set the IP Address of the machine from which you are executing the script
@@ -107,11 +108,15 @@ Write-Host "Successfully uploaded schema"
 ARMClient.exe put $transformUpload `@$mapContentFileName
 Write-Host "Successfully uploaded map"
 
+#Create logic app that generates input data
+$apiAppsTemplateResult = New-AzureResourceGroup -Name $resourceGroupName -Force -Location $resourceGroupLocation -TemplateFile $inputLogicAppTemplateLocation -hostingPlanName $hostingPlanName -sku $sku -gatewayName $gatewayName -logicAppName $logicAppName
+Write-Host "Successfully created logic app that generates input data"
+
 #Create the database objects required for the demo
 Invoke-Sqlcmd -ServerInstance $serverinstance -Database $databaseName -Username $sqlUserName -Password $sqlCredentail.GetNetworkCredential().Password -InputFile $sqlScriptLocation
-
-
 Write-Host "Script execution completed."
+
+
 }
 else
 {
