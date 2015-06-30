@@ -51,6 +51,7 @@ $sqlTable = "Orders"
 #region SQL+WebSite
 #Deploy an instance of SQL Azure database and a website. This website will be used as a FTP server in the demo. 
 $result = New-AzureResourceGroup -Name $resourceGroupName -Location $resourceGroupLocation -TemplateFile $templateFileLocation -DeploymentName $deploymentName -serverName $serverName -administratorLogin $sqlUserName -administratorPassword $sqlPassword -databaseName $databaseName -siteName $siteName -hostingPlanName $hostingPlanName -sku $sku -workerSize 0 -startIp "0.0.0.0" -endIp "0.0.0.0"
+Write-Host "Successfully created SQL Azure database and Azure Website"
 #endregion
 
 #region API Apps + Logic Apps
@@ -79,9 +80,36 @@ New-AzureSqlServerFirewallRule -FirewallRuleName $firewallRuleName -StartIpAddre
 
 #Create the API Apps and the Logic Apps required for the demo
 $apiAppsTemplateResult = New-AzureResourceGroup -Name $resourceGroupName -Force -Location $resourceGroupLocation -TemplateFile $apiAppsTemplateLocation -hostingPlanName $hostingPlanName -sku $sku -gatewayName $gatewayName -logicAppName $logicAppName -ftpServerAddress $ftpPubProfile.PublishUrl.Replace("/site/wwwroot","").Replace("ftp://","") -ftpUserName $ftpUserName -ftpPassword $ftpUserPasword -sqlServerName $serverinstance -sqlUserName $sqlUserName -sqlPassword $sqlCredentail.GetNetworkCredential().Password -sqlDatabase $databaseName -sqlTables $sqlTable
+Write-Host "Successfully created API Apps and Logic Apps"
+
+$transformFileName = ".\setup\SchemasAndMaps\FlatFileOrderMap.trfm"
+$schemaFileName = ".\setup\SchemasAndMaps\FlatFileOrder.xsd"
+$transformContent = Get-Content $transformFileName | Out-String
+$currentLocation = Get-Location
+$customDllLocation =  Join-Path $currentLocation "setup\Assembly\Newtonsoft.Json.dll"
+[Reflection.Assembly]::LoadFile($customDllLocation)
+$jsonTransformContent = "{ `"mapContent`" : " + [Newtonsoft.Json.JsonConvert]::ToString($transformContent) + "}"
+$mapContentFileName = ".\setup\SchemasAndMaps\FlatFileOrderMapContent.json"
+$jsonTransformContent | Out-File $mapContentFileName
+$subscriptionId = (Get-AzureSubscription -Current).SubscriptionId
+$flatfileSchemaName = "IncomingOrder.xsd"
+$flatfileSchemaFriendlyName = "IncomingOrder"
+$mapContentFileName = ".\setup\SchemasAndMaps\FlatFileOrderMapContent.json"
+$jsonTransformContent | Out-File $mapContentFileName
+
+$flatFileEncoderName = "FlatFileEncoder"
+$transformConnectorName = "TransformService"
+$transformName = "Orders"
+$schemaUpload = "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.Web/sites/$flatFileEncoderName$gatewayName/extensions/$flatFileEncoderName/api/Schema/$flatfileSchemaName/$flatfileSchemaFriendlyName" + "?api-version=1.1"
+$transformUpload = "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.Web/sites/$transformConnectorName$gatewayName/extensions/$transformConnectorName/api/Map/$transformName" + "?api-version=1.1"
+ARMClient.exe POST $schemaUpload `@$schemaFileName
+Write-Host "Successfully uploaded schema"
+ARMClient.exe put $transformUpload `@$mapContentFileName
+Write-Host "Successfully uploaded map"
 
 #Create the database objects required for the demo
 Invoke-Sqlcmd -ServerInstance $serverinstance -Database $databaseName -Username $sqlUserName -Password $sqlCredentail.GetNetworkCredential().Password -InputFile $sqlScriptLocation
+
 
 Write-Host "Script execution completed."
 }
