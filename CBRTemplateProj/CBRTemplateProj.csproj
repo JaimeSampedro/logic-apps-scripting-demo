@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{9B17FF06-F9BB-4CA8-85D5-8937466093DD}</ProjectGuid>
+    <ProjectTypeGuids>{1F7D1AC1-BF0E-4353-B6C4-10EB48C97527};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CBRTemplateProj</RootNamespace>
+    <AssemblyName>CBRTemplateProj</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Activities" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="IncomingOrder.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="XML_Delete_On_Orders.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="XML_Delete_On_Orders_Ref_1.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="XML_Insert_On_Orders.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="XML_Insert_On_Orders_Ref_1.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="XML_Insert_On_Orders_Ref_2.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="XML_Select_On_Orders.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="XML_Select_On_Orders_Ref_1.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="XML_Update_On_Orders.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="XML_Update_On_Orders_Ref_1.xsd">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\Windows Azure BizTalk Services SDK\Microsoft.ApplicationServer.Integration.Transforms.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:ns3="http://schemas.microsoft.com/Sql/2008/05/Types/Tables/dbo" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/Sql/2008/05/Types/Tables/dbo" version="1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:annotation>
+    <xs:appinfo>
+      <fileNameHint xmlns="http://schemas.microsoft.com/servicemodel/adapters/metadata/xsd">Table.dbo</fileNameHint>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:complexType name="Orders">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="1" name="ID" nillable="true" type="xs:int" />
+      <xs:element minOccurs="0" maxOccurs="1" name="ItemName" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:maxLength value="50" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element minOccurs="0" maxOccurs="1" name="Quantity" nillable="true" type="xs:int" />
+      <xs:element minOccurs="0" maxOccurs="1" name="UnitPrice" nillable="true" type="xs:double" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Orders" nillable="true" type="ns3:Orders" />
+</xs:schema>
